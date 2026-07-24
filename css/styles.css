@@ -29,6 +29,12 @@ header h1 {
   margin: 0;
 }
 
+.header-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 #syncBadge {
   font-size: 0.75rem;
   background: #c0392b;
@@ -38,6 +44,19 @@ header h1 {
 
 #syncBadge.ok {
   background: #3d7a4a;
+}
+
+#syncStatus {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+#syncStatus.ok {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 0.75;
 }
 
 main {

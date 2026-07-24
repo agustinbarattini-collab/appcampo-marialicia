@@ -73,7 +73,50 @@ sea público — el código queda visible para cualquiera, pero los datos de
 campo (lotes, cargas, insumos, etc.) de cada empresa nunca se suben a GitHub:
 viven únicamente en el navegador de cada dispositivo (IndexedDB), offline.
 
-## 8. Después de publicar
+## 8. Conectar la sincronización a Google Sheets (opcional pero recomendado)
+
+Cada empresa sincroniza a **su propia** Google Sheet, bajo la cuenta de Google
+que la vaya a administrar (la tuya o la de la empresa). Este paso requiere
+login de Google, así que lo tiene que hacer la persona dueña de esa cuenta.
+
+1. Crear una Google Sheet nueva (en blanco), nombrarla por ejemplo
+   "NombreEmpresa - App de Campo".
+2. Extensiones → Apps Script. Borrar el contenido de `Code.gs` y pegar el
+   contenido de `google-apps-script/Code.gs` de este repo.
+3. En la línea `const SHARED_SECRET = "..."`, reemplazar por un texto propio
+   al azar (no hace falta que sea complejo ni recordarlo, solo copiarlo).
+4. En el editor, elegir la función `setup` en el selector de funciones (arriba)
+   y tocar ▶ Ejecutar. Google va a pedir autorización la primera vez — es
+   normal, aceptar. Esto crea las 5 pestañas (Carga de Granos, Movimientos
+   Insumos, Fitosanitarios, Avance Siembra, Cierres Siembra) con sus columnas.
+5. Implementar → Nueva implementación → tipo "Aplicación web".
+   - Ejecutar como: **Yo**
+   - Quién tiene acceso: **Cualquier usuario**
+   - Implementar, copiar la URL que da (termina en `/exec`).
+6. En `js/config.js` de la carpeta de esa empresa, completar:
+   ```js
+   sheetsWebAppUrl: "https://script.google.com/macros/s/AKfy.../exec",
+   sheetsSyncToken: "el-mismo-texto-que-pusiste-en-SHARED_SECRET",
+   ```
+7. `git add`, `git commit`, `git push` para publicar el cambio.
+
+Desde ese momento, cada vez que el celular con la app instalada recupera
+conexión, manda solos los registros pendientes (Carga de Granos, Insumos,
+Fitosanitarios, Siembra) a la Sheet. El header muestra "X pendientes de
+sincronizar" o "Todo sincronizado".
+
+**Limitaciones a tener en cuenta:**
+- Las fotos (remitos, cargas) no se sincronizan por ahora — quedan solo en el
+  dispositivo. La Sheet es para los datos, no para las fotos.
+- Es una sincronización de ida (dispositivo → Sheet), tipo bitácora. Si un
+  registro se borra o se modifica en la app *después* de haberse sincronizado
+  (por ejemplo "Deshacer cierre" en Siembra), esa fila ya escrita en la Sheet
+  no se actualiza ni se borra sola.
+- Si más de un dispositivo carga datos para la misma empresa, cada uno
+  sincroniza independientemente contra la misma Sheet — no hay conflictos
+  porque cada fila es un registro nuevo (append), nunca se pisan entre sí.
+
+## 9. Después de publicar
 
 - Compartir la URL con la empresa. Desde el celular, abrirla en Chrome/Safari
   y usar "Agregar a pantalla de inicio" para instalarla como app.

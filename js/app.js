@@ -4,6 +4,7 @@ import { aplicacionesFitosanitariosView } from "./aplicacionesFitosanitarios.js"
 import { siembraView } from "./siembra.js";
 import { maestrosHubView } from "./maestrosHub.js";
 import { APP_CONFIG } from "./config.js";
+import { syncAll, contarPendientes } from "./sync.js";
 
 const routes = {
   carga: { view: cargaGranosView, label: "Carga de Granos" },
@@ -16,15 +17,53 @@ const routes = {
 const main = document.getElementById("main");
 const tabLinks = document.querySelectorAll("nav.tabbar a");
 
+async function updateSyncStatus() {
+  const el = document.getElementById("syncStatus");
+  if (!el || !APP_CONFIG.sheetsWebAppUrl) return;
+  el.classList.remove("hidden");
+  const pendientes = await contarPendientes();
+  if (pendientes === 0) {
+    el.textContent = "Todo sincronizado";
+    el.classList.add("ok");
+  } else {
+    el.textContent = `${pendientes} pendiente${pendientes === 1 ? "" : "s"} de sincronizar`;
+    el.classList.remove("ok");
+  }
+}
+
+async function runSync() {
+  await syncAll();
+  await updateSyncStatus();
+}
+
 async function router() {
   const hashRaw = (location.hash || "#carga").replace("#", "");
   const [mainKey, subKey] = hashRaw.split("/");
   const route = routes[mainKey] || routes.carga;
   tabLinks.forEach((a) => a.classList.toggle("active", a.dataset.route === mainKey));
   await route.view.render(main, subKey);
+  updateSyncStatus();
+}
+
+function updateOnlineBadge() {
+  const badge = document.getElementById("syncBadge");
+  if (!badge) return;
+  if (navigator.onLine) {
+    badge.textContent = "En línea";
+    badge.classList.add("ok");
+  } else {
+    badge.textContent = "Sin conexión";
+    badge.classList.remove("ok");
+  }
 }
 
 window.addEventListener("hashchange", router);
+window.addEventListener("online", () => {
+  updateOnlineBadge();
+  runSync();
+});
+window.addEventListener("offline", updateOnlineBadge);
+
 window.addEventListener("DOMContentLoaded", () => {
   document.title = APP_CONFIG.empresaNombre;
   const appTitle = document.getElementById("appTitle");
@@ -41,18 +80,6 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const updateOnlineBadge = () => {
-    const badge = document.getElementById("syncBadge");
-    if (!badge) return;
-    if (navigator.onLine) {
-      badge.textContent = "En línea";
-      badge.classList.add("ok");
-    } else {
-      badge.textContent = "Sin conexión";
-      badge.classList.remove("ok");
-    }
-  };
-  window.addEventListener("online", updateOnlineBadge);
-  window.addEventListener("offline", updateOnlineBadge);
   updateOnlineBadge();
+  if (navigator.onLine) runSync();
 });
