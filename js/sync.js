@@ -1,4 +1,4 @@
-import { dbGetAll, dbPut } from "./db.js";
+import { dbGetAll, dbPut, uid } from "./db.js";
 import { APP_CONFIG } from "./config.js";
 
 function flattenCarga(r) {
@@ -92,4 +92,67 @@ async function syncAll(onProgress) {
   if (onProgress) await onProgress();
 }
 
-export { syncAll, contarPendientes };
+const MAESTROS_CAMPOS = {
+  lotes: ["nombre"],
+  corredores: ["nombre"],
+  proveedores: ["nombre"],
+  contratistas: ["nombre"],
+  insumos: ["nombre", "unidad"],
+  silosBolsa: ["nombre", "cultivo", "kgTotalInicial"],
+};
+
+const MAESTROS_ETIQUETAS = {
+  lotes: "Lotes",
+  corredores: "Corredores",
+  proveedores: "Proveedores",
+  contratistas: "Contratistas",
+  insumos: "Insumos",
+  silosBolsa: "Silos Bolsa",
+};
+
+async function importarMaestros() {
+  if (!APP_CONFIG.sheetsWebAppUrl) {
+    return { ok: false, error: "La sincronización no está configurada." };
+  }
+  let data;
+  try {
+    const res = await fetch(APP_CONFIG.sheetsWebAppUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: APP_CONFIG.sheetsSyncToken, accion: "leerMaestros" }),
+    });
+    data = await res.json();
+  } catch (err) {
+    return { ok: false, error: "No se pudo conectar con la planilla: " + err };
+  }
+  if (!data.ok) {
+    return { ok: false, error: data.error || "La planilla rechazó el pedido." };
+  }
+
+  const resumen = {};
+  for (const [store, campos] of Object.entries(MAESTROS_CAMPOS)) {
+    const filas = data.maestros[store] || [];
+    const existentes = await dbGetAll(store);
+    let nuevos = 0;
+    let actualizados = 0;
+    for (const fila of filas) {
+      const nombre = String(fila.nombre || "").trim();
+      if (!nombre) continue;
+      const existente = existentes.find((e) => e.nombre.trim().toLowerCase() === nombre.toLowerCase());
+      const record = existente ? { ...existente } : { id: uid(), nombre };
+      for (const campo of campos) {
+        if (campo === "nombre") continue;
+        let valor = fila[campo];
+        if (campo === "kgTotalInicial") valor = parseFloat(valor) || 0;
+        record[campo] = valor;
+      }
+      await dbPut(store, record);
+      if (existente) actualizados++;
+      else nuevos++;
+    }
+    resumen[MAESTROS_ETIQUETAS[store]] = { nuevos, actualizados };
+  }
+  return { ok: true, resumen };
+}
+
+export { syncAll, contarPendientes, importarMaestros };

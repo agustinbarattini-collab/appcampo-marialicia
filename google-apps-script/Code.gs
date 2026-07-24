@@ -53,19 +53,31 @@ const SHEETS = {
   },
 };
 
+// Pestañas de maestros: las edita la persona directamente en la Sheet.
+// La app las lee (POST con accion:"leerMaestros") para importar Lotes, Insumos, etc.
+// sin tipearlos a mano.
+const MAESTROS_SHEETS = {
+  lotes: { name: "Maestros - Lotes", headers: ["nombre"] },
+  silosBolsa: { name: "Maestros - Silos Bolsa", headers: ["nombre", "cultivo", "kgTotalInicial"] },
+  corredores: { name: "Maestros - Corredores", headers: ["nombre"] },
+  insumos: { name: "Maestros - Insumos", headers: ["nombre", "unidad"] },
+  proveedores: { name: "Maestros - Proveedores", headers: ["nombre"] },
+  contratistas: { name: "Maestros - Contratistas", headers: ["nombre"] },
+};
+
 /**
  * Correr esta función UNA vez desde el editor (▶) para crear las pestañas con sus
  * encabezados. Google va a pedir autorización la primera vez: es normal, hay que
- * aceptar (la app es tuya, solo actúa sobre esta planilla).
+ * aceptar (la app es tuya, solo actúa sobre esta planilla). Si ya la corriste antes
+ * y agregaste pestañas de maestros nuevas, volver a correrla es seguro (no borra nada).
  */
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(SHEETS).forEach(function (key) {
-    const cfg = SHEETS[key];
-    let sheet = ss.getSheetByName(cfg.name);
-    if (!sheet) sheet = ss.insertSheet(cfg.name);
-    sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
-    sheet.setFrozenRows(1);
+    crearPestana(ss, SHEETS[key]);
+  });
+  Object.keys(MAESTROS_SHEETS).forEach(function (key) {
+    crearPestana(ss, MAESTROS_SHEETS[key]);
   });
   ["Hoja 1", "Sheet1"].forEach(function (n) {
     const s = ss.getSheetByName(n);
@@ -73,12 +85,30 @@ function setup() {
   });
 }
 
+function crearPestana(ss, cfg) {
+  let sheet = ss.getSheetByName(cfg.name);
+  if (!sheet) sheet = ss.insertSheet(cfg.name);
+  sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
+  sheet.setFrozenRows(1);
+}
+
+/**
+ * Todo pasa por POST (incluida la lectura de maestros). Los pedidos GET a un Web App
+ * de Apps Script no siempre devuelven headers CORS utilizables desde fetch() en el
+ * navegador (por el redirect interno a script.googleusercontent.com), así que se evita
+ * doGet por completo y se usa un campo "accion" para distinguir lectura de escritura.
+ */
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     if (body.token !== SHARED_SECRET) {
       return respond({ ok: false, error: "token inválido" });
     }
+
+    if (body.accion === "leerMaestros") {
+      return responderMaestros();
+    }
+
     const cfg = SHEETS[body.tipo];
     if (!cfg) {
       return respond({ ok: false, error: "tipo desconocido: " + body.tipo });
@@ -86,7 +116,7 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName(cfg.name);
     if (!sheet) {
-      setup();
+      crearPestana(ss, cfg);
       sheet = ss.getSheetByName(cfg.name);
     }
     const r = body.registro || {};
@@ -102,6 +132,30 @@ function doPost(e) {
   } catch (err) {
     return respond({ ok: false, error: String(err) });
   }
+}
+
+function responderMaestros() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const maestros = {};
+  Object.keys(MAESTROS_SHEETS).forEach(function (key) {
+    const cfg = MAESTROS_SHEETS[key];
+    const sheet = ss.getSheetByName(cfg.name);
+    maestros[key] = sheet ? leerPestana(sheet, cfg.headers) : [];
+  });
+  return respond({ ok: true, maestros: maestros });
+}
+
+function leerPestana(sheet, headers) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  return values
+    .filter(function (row) { return String(row[0]).trim() !== ""; })
+    .map(function (row) {
+      const obj = {};
+      headers.forEach(function (h, i) { obj[h] = row[i]; });
+      return obj;
+    });
 }
 
 function respond(obj) {
