@@ -4,9 +4,9 @@ const APP_CONFIG = {
   colorPrimario: "#273739",
   colorSecundario: "#3f5457",
   // URL del Web App de Google Apps Script (ver DUPLICAR.md). Vacío = sin sincronización.
-  sheetsWebAppUrl: "",
+  sheetsWebAppUrl: "https://script.google.com/macros/s/AKfycbzUXZFPI004MKmysrkTN1Yf0AMvL0Jz5dX1GsvfW5JddTTtIZWJUAZMwIgWUBad4LRaDw/exec",
   // Mismo token que SHARED_SECRET en google-apps-script/Code.gs.
-  sheetsSyncToken: "",
+  sheetsSyncToken: "MA-2026",
 };
 
 export { APP_CONFIG };
