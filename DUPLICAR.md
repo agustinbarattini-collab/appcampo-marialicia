@@ -87,8 +87,10 @@ login de Google, así que lo tiene que hacer la persona dueña de esa cuenta.
    al azar (no hace falta que sea complejo ni recordarlo, solo copiarlo).
 4. En el editor, elegir la función `setup` en el selector de funciones (arriba)
    y tocar ▶ Ejecutar. Google va a pedir autorización la primera vez — es
-   normal, aceptar. Esto crea las 5 pestañas (Carga de Granos, Movimientos
-   Insumos, Fitosanitarios, Avance Siembra, Cierres Siembra) con sus columnas.
+   normal, aceptar. Esto crea las 5 pestañas de datos (Carga de Granos,
+   Movimientos Insumos, Fitosanitarios, Avance Siembra, Cierres Siembra) y
+   6 pestañas de "Maestros - ..." (Lotes, Silos Bolsa, Corredores, Insumos,
+   Proveedores, Contratistas) con sus columnas.
 5. Implementar → Nueva implementación → tipo "Aplicación web".
    - Ejecutar como: **Yo**
    - Quién tiene acceso: **Cualquier usuario**
@@ -116,7 +118,25 @@ sincronizar" o "Todo sincronizado".
   sincroniza independientemente contra la misma Sheet — no hay conflictos
   porque cada fila es un registro nuevo (append), nunca se pisan entre sí.
 
-## 9. Después de publicar
+## 9. Cargar maestros en lote desde la Sheet (en vez de tipearlos a mano)
+
+Las pestañas "Maestros - Lotes", "Maestros - Silos Bolsa", "Maestros -
+Corredores", "Maestros - Insumos", "Maestros - Proveedores" y "Maestros -
+Contratistas" (creadas por `setup`) se editan directamente en la Sheet:
+
+- Pestañas de una sola columna (Lotes, Corredores, Proveedores, Contratistas):
+  una fila por nombre.
+- "Maestros - Insumos": columnas `nombre` y `unidad`.
+- "Maestros - Silos Bolsa": columnas `nombre`, `cultivo`, `kgTotalInicial`.
+
+Se puede pegar una lista copiada de otra planilla directamente ahí. Después,
+en la app → **Maestros**, tocar **"Actualizar desde Sheets"**: trae todo lo
+cargado en esas pestañas. Vuelve a tocarlo cada vez que agregues filas nuevas
+en la Sheet — no borra nada que ya esté cargado en el celular, solo agrega lo
+nuevo y actualiza lo que cambió (matchea por nombre, sin distinguir
+mayúsculas/minúsculas).
+
+## 10. Después de publicar
 
 - Compartir la URL con la empresa. Desde el celular, abrirla en Chrome/Safari
   y usar "Agregar a pantalla de inicio" para instalarla como app.
