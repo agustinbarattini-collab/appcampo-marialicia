@@ -19,15 +19,16 @@ function opts(list, { withStock } = {}) {
 
 function renderStockCard(container, insumos) {
   const el = container.querySelector("#stockCard");
+  const conStock = insumos.filter((i) => i.stock > 0).sort((a, b) => a.nombre.localeCompare(b.nombre));
   el.innerHTML =
     `<h2 style="margin-top:0;">Stock actual</h2>` +
-    insumos
-      .slice()
-      .sort((a, b) => a.nombre.localeCompare(b.nombre))
-      .map(
-        (i) => `<div class="list-item"><div>${i.nombre}</div><div><strong>${i.stock}</strong> ${i.unidad || ""}</div></div>`
-      )
-      .join("");
+    (conStock.length
+      ? conStock
+          .map(
+            (i) => `<div class="list-item"><div>${i.nombre}</div><div><strong>${i.stock}</strong> ${i.unidad || ""}</div></div>`
+          )
+          .join("")
+      : '<div class="empty-state">Todavía no hay insumos con stock cargado.</div>');
 }
 
 const movimientosInsumosView = {
