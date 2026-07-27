@@ -63,6 +63,7 @@ const MAESTROS_SHEETS = {
   insumos: { name: "Maestros - Insumos", headers: ["nombre", "unidad"] },
   proveedores: { name: "Maestros - Proveedores", headers: ["nombre"] },
   contratistas: { name: "Maestros - Contratistas", headers: ["nombre"] },
+  planSiembra: { name: "Maestros - Plan Siembra", headers: ["loteNombre", "cultivo", "superficieTeorica"] },
 };
 
 /**
@@ -108,6 +109,9 @@ function doPost(e) {
     if (body.accion === "leerMaestros") {
       return responderMaestros();
     }
+    if (body.accion === "leerRegistros") {
+      return responderRegistros();
+    }
 
     const cfg = SHEETS[body.tipo];
     if (!cfg) {
@@ -143,6 +147,17 @@ function responderMaestros() {
     maestros[key] = sheet ? leerPestana(sheet, cfg.headers) : [];
   });
   return respond({ ok: true, maestros: maestros });
+}
+
+function responderRegistros() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const registros = {};
+  Object.keys(SHEETS).forEach(function (key) {
+    const cfg = SHEETS[key];
+    const sheet = ss.getSheetByName(cfg.name);
+    registros[key] = sheet ? leerPestana(sheet, cfg.headers) : [];
+  });
+  return respond({ ok: true, registros: registros });
 }
 
 function leerPestana(sheet, headers) {

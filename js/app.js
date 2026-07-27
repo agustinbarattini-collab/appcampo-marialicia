@@ -4,7 +4,7 @@ import { aplicacionesFitosanitariosView } from "./aplicacionesFitosanitarios.js"
 import { siembraView } from "./siembra.js";
 import { maestrosHubView } from "./maestrosHub.js";
 import { APP_CONFIG } from "./config.js";
-import { syncAll, contarPendientes } from "./sync.js";
+import { syncAll, pullAll, contarPendientes } from "./sync.js";
 
 const routes = {
   carga: { view: cargaGranosView, label: "Carga de Granos" },
@@ -33,7 +33,10 @@ async function updateSyncStatus() {
 
 async function runSync() {
   await syncAll();
+  await pullAll();
   await updateSyncStatus();
+  // Refresca la vista actual por si trajo datos nuevos de otros dispositivos.
+  await router();
 }
 
 async function router() {
