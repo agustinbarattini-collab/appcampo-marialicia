@@ -39,6 +39,17 @@ async function runSync() {
   await router();
 }
 
+// Versión liviana: solo sube lo pendiente y actualiza el badge, sin traer datos
+// de otros dispositivos ni redibujar la pantalla (para no pisar un formulario
+// que el usuario ya empezó a llenar de nuevo). Se dispara justo después de
+// guardar cualquier registro, además del sync completo en reconexión/apertura.
+async function syncNow() {
+  await syncAll();
+  await updateSyncStatus();
+}
+
+window.addEventListener("appcampo-sync-now", syncNow);
+
 async function router() {
   const hashRaw = (location.hash || "#carga").replace("#", "");
   const [mainKey, subKey] = hashRaw.split("/");

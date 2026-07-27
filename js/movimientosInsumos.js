@@ -153,6 +153,7 @@ function renderFormIngreso(container, formArea, { proveedores, insumos }, onSave
       fechaCreacionRegistro: new Date().toISOString(),
     };
     await dbPut(STORE, registro);
+    window.dispatchEvent(new Event("appcampo-sync-now"));
     onSaved();
   });
 }
@@ -244,6 +245,7 @@ function renderFormSalida(container, formArea, { contratistas, insumos, ordenes 
       fechaCreacionRegistro: new Date().toISOString(),
     };
     await dbPut(STORE, registro);
+    window.dispatchEvent(new Event("appcampo-sync-now"));
     onSaved();
   });
 }
@@ -352,6 +354,7 @@ function renderFormDevolucion(container, formArea, { ordenes, insumos }, onSaved
       fechaCreacionRegistro: new Date().toISOString(),
     };
     await dbPut(STORE, registro);
+    window.dispatchEvent(new Event("appcampo-sync-now"));
     onSaved();
   });
 }

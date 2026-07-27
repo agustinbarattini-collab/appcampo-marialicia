@@ -205,6 +205,7 @@ const aplicacionesFitosanitariosView = {
         fechaCreacionRegistro: new Date().toISOString(),
       };
       await dbPut(STORE, registro);
+      window.dispatchEvent(new Event("appcampo-sync-now"));
       this.render(container);
     });
 

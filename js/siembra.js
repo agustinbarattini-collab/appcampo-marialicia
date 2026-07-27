@@ -263,6 +263,7 @@ function renderFormAvance(container, formArea, { planesAbiertos }, onSaved) {
       fechaCreacionRegistro: new Date().toISOString(),
     };
     await dbPut(STORE_AVANCE, registro);
+    window.dispatchEvent(new Event("appcampo-sync-now"));
     onSaved(cerrar);
   });
 }
@@ -365,6 +366,7 @@ function renderFormCierre(container, formArea, { pendientes }, onSaved) {
         fechaCreacionRegistro: new Date().toISOString(),
       };
       await dbPut(STORE_CIERRE, registro);
+      window.dispatchEvent(new Event("appcampo-sync-now"));
       onSaved();
     });
 
