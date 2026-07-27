@@ -103,20 +103,35 @@ login de Google, así que lo tiene que hacer la persona dueña de esa cuenta.
 7. `git add`, `git commit`, `git push` para publicar el cambio.
 
 Desde ese momento, cada vez que el celular con la app instalada recupera
-conexión, manda solos los registros pendientes (Carga de Granos, Insumos,
-Fitosanitarios, Siembra) a la Sheet. El header muestra "X pendientes de
-sincronizar" o "Todo sincronizado".
+conexión: (1) manda los registros pendientes (Carga de Granos, Insumos,
+Fitosanitarios, Siembra) a la Sheet, y (2) **trae los registros que cargaron
+otros dispositivos** que todavía no tenga, para que el stock, las cuentas y
+los avances se vean iguales en todos los celulares del equipo. El header
+muestra "X pendientes de sincronizar" o "Todo sincronizado".
+
+**Cómo funciona el "traer de otros dispositivos" (importante entenderlo):**
+los IDs internos de cada registro (de qué lote, qué insumo, etc.) se generan
+en cada celular por separado — no son compartidos. Al traer un registro de la
+Sheet, la app busca localmente un Lote/Insumo/Contratista/Orden/Plan con el
+**mismo nombre**; si no lo encuentra, lo crea automáticamente con ese nombre
+(igual que ya pasa hoy al escribir una Orden de trabajo nueva a mano). Por
+eso es buena práctica usar siempre "Actualizar desde Sheets" en Maestros
+antes de que el equipo empiece a cargar en un celular nuevo — así los nombres
+coinciden con los que ya existen en vez de generar duplicados con mayúsculas
+o espacios distintos.
 
 **Limitaciones a tener en cuenta:**
 - Las fotos (remitos, cargas) no se sincronizan por ahora — quedan solo en el
   dispositivo. La Sheet es para los datos, no para las fotos.
-- Es una sincronización de ida (dispositivo → Sheet), tipo bitácora. Si un
-  registro se borra o se modifica en la app *después* de haberse sincronizado
-  (por ejemplo "Deshacer cierre" en Siembra), esa fila ya escrita en la Sheet
-  no se actualiza ni se borra sola.
-- Si más de un dispositivo carga datos para la misma empresa, cada uno
-  sincroniza independientemente contra la misma Sheet — no hay conflictos
-  porque cada fila es un registro nuevo (append), nunca se pisan entre sí.
+- Editar/borrar un registro en la app *después* de haberse sincronizado (por
+  ejemplo "Deshacer cierre" en Siembra) no actualiza ni borra la fila ya
+  escrita en la Sheet, y otros dispositivos que ya la trajeron tampoco se
+  enteran del cambio. Para corregir un dato ya sincronizado hay que hacerlo
+  a mano en la Sheet.
+- Cada sincronización trae **todas** las filas de las 5 pestañas de datos
+  (no solo las nuevas). Con volúmenes de una campaña normal no es un
+  problema, pero si con los años la planilla crece mucho, en algún momento
+  convendría optimizar esto (traer solo lo posterior a la última sincronización).
 
 ## 9. Cargar maestros en lote desde la Sheet (en vez de tipearlos a mano)
 
