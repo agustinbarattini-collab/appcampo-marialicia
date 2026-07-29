@@ -89,8 +89,28 @@ window.addEventListener("DOMContentLoaded", () => {
   router();
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js").catch((err) => {
-      console.warn("No se pudo registrar el service worker:", err);
+    navigator.serviceWorker
+      .register("./service-worker.js")
+      .then((reg) => {
+        // Revisa si hay una versión nueva publicada cada vez que la app
+        // vuelve a primer plano (no solo al abrirla desde cero).
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") reg.update();
+        });
+      })
+      .catch((err) => {
+        console.warn("No se pudo registrar el service worker:", err);
+      });
+
+    // El service worker usa skipWaiting()+clients.claim(), así que apenas
+    // una versión nueva termina de activarse toma el control de la página
+    // sola. Cuando eso pasa, recargamos para que se vea la versión nueva
+    // sin depender de que el usuario cierre y reabra la app a mano.
+    let recargandoPorActualizacion = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (recargandoPorActualizacion) return;
+      recargandoPorActualizacion = true;
+      location.reload();
     });
   }
 
