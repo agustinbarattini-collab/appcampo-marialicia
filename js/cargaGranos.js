@@ -30,14 +30,6 @@ async function poblarCorredorSelect(select) {
     corredores.map((c) => `<option value="${c.id}">${c.nombre}</option>`).join("");
 }
 
-function calcularNeto(container) {
-  const bruto = parseFloat(container.querySelector("#fBruto").value) || 0;
-  const tara = parseFloat(container.querySelector("#fTara").value) || 0;
-  const neto = Math.max(0, bruto - tara);
-  container.querySelector("#fNeto").textContent = neto.toLocaleString("es-AR");
-  return neto;
-}
-
 const cargaGranosView = {
   async render(container) {
     const [lotes, silos, corredores] = await Promise.all([
@@ -111,19 +103,9 @@ const cargaGranosView = {
             <select id="fCorredorId" required></select>
           </div>
 
-          <div class="row">
-            <div class="field">
-              <label>Kg brutos</label>
-              <input type="number" step="1" id="fBruto" required />
-            </div>
-            <div class="field">
-              <label>Tara camión (kg)</label>
-              <input type="number" step="1" id="fTara" required />
-            </div>
-          </div>
           <div class="field">
-            <label>Kg netos (calculado)</label>
-            <div class="pill" id="fNeto" style="font-size:1rem;padding:8px 12px;">0</div>
+            <label>Kg netos</label>
+            <input type="number" step="1" id="fNeto" required />
           </div>
 
           <div class="field">
@@ -167,9 +149,6 @@ const cargaGranosView = {
 
     await poblarCorredorSelect(container.querySelector("#fCorredorId"));
 
-    container.querySelector("#fBruto").addEventListener("input", () => calcularNeto(container));
-    container.querySelector("#fTara").addEventListener("input", () => calcularNeto(container));
-
     container.querySelector("#btnGps").addEventListener("click", () => {
       const resultado = container.querySelector("#gpsResultado");
       if (!navigator.geolocation) {
@@ -196,7 +175,7 @@ const cargaGranosView = {
         alert("Elegí el origen (lote o silo bolsa).");
         return;
       }
-      const neto = calcularNeto(container);
+      const neto = parseFloat(container.querySelector("#fNeto").value) || 0;
 
       let origenNombre = "";
       if (origenTipoSel.value === "silo") {
@@ -235,8 +214,8 @@ const cargaGranosView = {
         patente: container.querySelector("#fPatente").value.trim(),
         corredorId,
         corredorNombre: corredor ? corredor.nombre : "",
-        kgBrutos: parseFloat(container.querySelector("#fBruto").value) || 0,
-        tara: parseFloat(container.querySelector("#fTara").value) || 0,
+        kgBrutos: 0,
+        tara: 0,
         kgNeto: neto,
         humedad: parseFloat(container.querySelector("#fHumedad").value) || null,
         observaciones: container.querySelector("#fObs").value.trim(),
