@@ -14,8 +14,42 @@ const routes = {
   maestros: { view: maestrosHubView, label: "Maestros" },
 };
 
+// Links por rol: cada uno oculta las pestañas que no le corresponden y abre
+// directo en la primera. "Maestros" queda visible para todos los roles
+// porque ahí se actualizan los datos base (lotes, insumos, etc.) desde Sheets.
+// Ejemplos de link para compartir: "https://.../?rol=granos", "?rol=siembra", "?rol=fitoinsumos".
+const ROLES = {
+  granos: { rutas: ["carga", "maestros"] },
+  siembra: { rutas: ["siembra", "maestros"] },
+  fitoinsumos: { rutas: ["insumos", "fitosanitarios", "maestros"] },
+};
+const ROL_STORAGE_KEY = "appcampo_rol";
+
+function resolverRol() {
+  const rolUrl = new URLSearchParams(location.search).get("rol");
+  if (rolUrl === "todos") {
+    localStorage.removeItem(ROL_STORAGE_KEY);
+    return null;
+  }
+  if (rolUrl && ROLES[rolUrl]) {
+    localStorage.setItem(ROL_STORAGE_KEY, rolUrl);
+    return rolUrl;
+  }
+  const guardado = localStorage.getItem(ROL_STORAGE_KEY);
+  return ROLES[guardado] ? guardado : null;
+}
+
+// Si es null, no hay restricción (acceso completo, comportamiento de siempre).
+const rolActivo = resolverRol();
+const rutasPermitidas = rolActivo ? ROLES[rolActivo].rutas : null;
+
 const main = document.getElementById("main");
 const tabLinks = document.querySelectorAll("nav.tabbar a");
+if (rutasPermitidas) {
+  tabLinks.forEach((a) => {
+    if (!rutasPermitidas.includes(a.dataset.route)) a.classList.add("hidden");
+  });
+}
 
 async function updateSyncStatus() {
   const el = document.getElementById("syncStatus");
@@ -51,8 +85,20 @@ async function syncNow() {
 window.addEventListener("appcampo-sync-now", syncNow);
 
 async function router() {
-  const hashRaw = (location.hash || "#carga").replace("#", "");
-  const [mainKey, subKey] = hashRaw.split("/");
+  const hashRaw = (location.hash || "").replace("#", "");
+  const [mainKeyRaw, subKey] = hashRaw.split("/");
+  const defaultKey = rutasPermitidas ? rutasPermitidas[0] : "carga";
+  const mainKey = mainKeyRaw || defaultKey;
+
+  if (rutasPermitidas && !rutasPermitidas.includes(mainKey)) {
+    location.hash = defaultKey;
+    return; // el cambio de hash vuelve a disparar router() con la ruta permitida
+  }
+  if (!mainKeyRaw) {
+    location.hash = mainKey;
+    return;
+  }
+
   const route = routes[mainKey] || routes.carga;
   tabLinks.forEach((a) => a.classList.toggle("active", a.dataset.route === mainKey));
   await route.view.render(main, subKey);
