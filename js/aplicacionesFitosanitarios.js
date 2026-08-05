@@ -2,7 +2,7 @@ import { dbGetAll, dbPut, dbDelete, uid } from "./db.js";
 import { getCuentaContratistas } from "./stockUtils.js";
 
 const STORE = "aplicacionesFitosanitarios";
-const NUM_PRODUCTOS = 5;
+const NUM_PRODUCTOS = 6;
 
 function nowLocalDatetime() {
   const d = new Date();

@@ -14,6 +14,10 @@ const SHEETS = {
       "id", "fecha", "origenTipo", "origenNombre", "cultivo", "ctg", "chofer", "patente",
       "corredorNombre", "kgBrutos", "tara", "kgNeto", "humedad", "gpsLat", "gpsLng",
       "observaciones", "fechaCreacionRegistro", "fechaSincronizacion",
+      // Agregados después (van al final para no correr de lugar los datos ya cargados
+      // en la planilla): segundo origen opcional, para cuando el camión se carga de
+      // 2 bolsas o 2 lotes en el mismo viaje.
+      "origen2Tipo", "origen2Nombre", "kgOrigen2",
     ],
   },
   movimientoInsumo: {
@@ -34,6 +38,8 @@ const SHEETS = {
       "producto4Nombre", "producto4Cantidad", "producto4Unidad",
       "producto5Nombre", "producto5Cantidad", "producto5Unidad",
       "comentarios", "fechaCreacionRegistro", "fechaSincronizacion",
+      // Va al final para no correr de lugar los datos ya cargados en la planilla.
+      "producto6Nombre", "producto6Cantidad", "producto6Unidad",
     ],
   },
   avanceSiembra: {

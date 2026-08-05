@@ -59,7 +59,7 @@ function resumenCierre(c) {
   return partes.join(" · ") || "Sin productos cargados";
 }
 
-function renderResumenCard(container, planes) {
+function renderResumenCard(container, planes, cultivoExpandido, onToggleCultivo) {
   const el = container.querySelector("#resumenCard");
   if (planes.length === 0) {
     el.innerHTML = `
@@ -74,9 +74,10 @@ function renderResumenCard(container, planes) {
   const porCultivo = {};
   for (const l of planes) {
     const key = l.cultivo || "Sin cultivo";
-    if (!porCultivo[key]) porCultivo[key] = { cultivo: key, ha: 0, teorica: 0 };
+    if (!porCultivo[key]) porCultivo[key] = { cultivo: key, ha: 0, teorica: 0, lotes: [] };
     porCultivo[key].ha += l.hasSembradas;
     porCultivo[key].teorica += l.superficieTeorica || 0;
+    porCultivo[key].lotes.push(l);
   }
 
   el.innerHTML = `
@@ -86,32 +87,45 @@ function renderResumenCard(container, planes) {
       <div class="pill">${totalHa} / ${totalTeorica} ha${pctTexto(totalHa, totalTeorica)}</div>
     </div>
     ${Object.values(porCultivo)
-      .map(
-        (c) => `
-      <div class="list-item">
-        <div>${c.cultivo}</div>
-        <div class="pill">${c.ha} / ${c.teorica} ha${pctTexto(c.ha, c.teorica)}</div>
-      </div>`
-      )
-      .join("")}
-    <h2 style="margin: 14px 0 4px;">Por lote</h2>
-    ${planes
-      .slice()
-      .sort((a, b) => a.loteNombre.localeCompare(b.loteNombre) || a.cultivo.localeCompare(b.cultivo))
-      .map((l) => {
-        const estado = l.cerrado ? "Cerrado" : l.pendienteCierre ? "Pend. cierre" : "Abierto";
-        const estadoClass = l.cerrado ? "sincronizado" : l.pendienteCierre ? "pendiente" : "";
+      .sort((a, b) => a.cultivo.localeCompare(b.cultivo))
+      .map((c) => {
+        const expandido = c.cultivo === cultivoExpandido;
+        const lotesOrdenados = c.lotes.slice().sort((a, b) => a.loteNombre.localeCompare(b.loteNombre));
         return `
-        <div class="list-item">
-          <div>
-            <div><strong>${l.loteNombre}</strong> — ${l.cultivo} <span class="pill ${estadoClass}">${estado}</span></div>
-            <div class="muted">${l.registros.length} registro(s)${l.cierre ? " · cierre " + l.cierre.fecha + ": " + resumenCierre(l.cierre) : ""}</div>
-          </div>
-          <div class="pill">${l.hasSembradas}${l.superficieTeorica ? ` / ${l.superficieTeorica}` : ""} ha${pctTexto(l.hasSembradas, l.superficieTeorica)}</div>
-        </div>`;
+      <div class="cultivo-block">
+        <div class="list-item cultivo-header" data-cultivo="${c.cultivo}" style="cursor:pointer;">
+          <div>${expandido ? "▾" : "▸"} ${c.cultivo}</div>
+          <div class="pill">${c.ha} / ${c.teorica} ha${pctTexto(c.ha, c.teorica)}</div>
+        </div>
+        ${
+          expandido
+            ? `
+        <div class="cultivo-lotes" style="padding-left:14px;">
+          ${lotesOrdenados
+            .map((l) => {
+              const estado = l.cerrado ? "Cerrado" : l.pendienteCierre ? "Pend. cierre" : "Abierto";
+              const estadoClass = l.cerrado ? "sincronizado" : l.pendienteCierre ? "pendiente" : "";
+              return `
+            <div class="list-item">
+              <div>
+                <div><strong>${l.loteNombre}</strong> <span class="pill ${estadoClass}">${estado}</span></div>
+                <div class="muted">${l.registros.length} registro(s)${l.cierre ? " · cierre " + l.cierre.fecha + ": " + resumenCierre(l.cierre) : ""}</div>
+              </div>
+              <div class="pill">${l.hasSembradas}${l.superficieTeorica ? ` / ${l.superficieTeorica}` : ""} ha${pctTexto(l.hasSembradas, l.superficieTeorica)}</div>
+            </div>`;
+            })
+            .join("")}
+        </div>`
+            : ""
+        }
+      </div>`;
       })
       .join("")}
   `;
+
+  el.querySelectorAll(".cultivo-header").forEach((h) => {
+    h.addEventListener("click", () => onToggleCultivo(h.dataset.cultivo));
+  });
 }
 
 function renderFormPlan(container, formArea, { lotesMaestro, planesConEstado }, onSaved) {
@@ -375,7 +389,7 @@ function renderFormCierre(container, formArea, { pendientes }, onSaved) {
 }
 
 const siembraView = {
-  state: { tipo: "avance" },
+  state: { tipo: "avance", cultivoExpandido: null },
 
   async render(container) {
     const [lotesMaestro, planesConEstado] = await Promise.all([dbGetAll("lotes"), getAvancePlanes()]);
@@ -394,7 +408,13 @@ const siembraView = {
       <div class="card" id="listaSiembra"></div>
     `;
 
-    renderResumenCard(container, planesConEstado);
+    const refrescarResumen = () => {
+      renderResumenCard(container, planesConEstado, this.state.cultivoExpandido, (cultivo) => {
+        this.state.cultivoExpandido = this.state.cultivoExpandido === cultivo ? null : cultivo;
+        refrescarResumen();
+      });
+    };
+    refrescarResumen();
 
     const tipoToggle = container.querySelector("#tipoToggle");
     tipoToggle.querySelectorAll("button").forEach((btn) => {

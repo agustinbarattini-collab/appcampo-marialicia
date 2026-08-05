@@ -3,9 +3,13 @@ import { dbGetAll } from "./db.js";
 async function getSilosBolsaConStock() {
   const [silos, cargas] = await Promise.all([dbGetAll("silosBolsa"), dbGetAll("cargasGranos")]);
   return silos.map((s) => {
-    const usado = cargas
-      .filter((c) => c.origenTipo === "silo" && c.origenId === s.id)
-      .reduce((sum, c) => sum + (c.kgNeto || 0), 0);
+    let usado = 0;
+    for (const c of cargas) {
+      const kgOrigen2 = c.kgOrigen2 || 0;
+      const kgOrigen1 = (c.kgNeto || 0) - kgOrigen2;
+      if (c.origenTipo === "silo" && c.origenId === s.id) usado += kgOrigen1;
+      if (c.origen2Tipo === "silo" && c.origen2Id === s.id) usado += kgOrigen2;
+    }
     return { ...s, kgUsado: usado, kgResidual: Math.max(0, (s.kgTotalInicial || 0) - usado) };
   });
 }

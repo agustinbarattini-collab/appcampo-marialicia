@@ -75,6 +75,21 @@ const cargaGranosView = {
               </select>
               <select id="fOrigenId" required></select>
             </div>
+            <button type="button" class="secondary" id="btnToggleOrigen2" style="margin-top:8px;">+ Agregar 2do origen</button>
+          </div>
+
+          <div class="field hidden" id="bloqueOrigen2">
+            <label>Segundo origen</label>
+            <div class="row">
+              <select id="fOrigen2Tipo">
+                <option value="lote">Lote</option>
+                <option value="silo">Silo Bolsa</option>
+              </select>
+              <select id="fOrigen2Id"></select>
+            </div>
+            <label style="margin-top:8px;">Kg netos que vinieron del segundo origen</label>
+            <input type="number" step="1" id="fKgOrigen2" placeholder="Ej: 8000" />
+            <button type="button" class="secondary" id="btnQuitarOrigen2" style="margin-top:8px;">Quitar segundo origen</button>
           </div>
 
           <div class="field">
@@ -147,6 +162,31 @@ const cargaGranosView = {
     await poblarOrigenSelect(origenIdSel, origenTipoSel.value);
     origenTipoSel.addEventListener("change", () => poblarOrigenSelect(origenIdSel, origenTipoSel.value));
 
+    const bloqueOrigen2 = container.querySelector("#bloqueOrigen2");
+    const btnToggleOrigen2 = container.querySelector("#btnToggleOrigen2");
+    const btnQuitarOrigen2 = container.querySelector("#btnQuitarOrigen2");
+    const origen2TipoSel = container.querySelector("#fOrigen2Tipo");
+    const origen2IdSel = container.querySelector("#fOrigen2Id");
+    const fKgOrigen2 = container.querySelector("#fKgOrigen2");
+    let origen2Activo = false;
+
+    async function activarOrigen2() {
+      origen2Activo = true;
+      bloqueOrigen2.classList.remove("hidden");
+      btnToggleOrigen2.classList.add("hidden");
+      await poblarOrigenSelect(origen2IdSel, origen2TipoSel.value);
+    }
+    function desactivarOrigen2() {
+      origen2Activo = false;
+      bloqueOrigen2.classList.add("hidden");
+      btnToggleOrigen2.classList.remove("hidden");
+      origen2IdSel.value = "";
+      fKgOrigen2.value = "";
+    }
+    btnToggleOrigen2.addEventListener("click", activarOrigen2);
+    btnQuitarOrigen2.addEventListener("click", desactivarOrigen2);
+    origen2TipoSel.addEventListener("change", () => poblarOrigenSelect(origen2IdSel, origen2TipoSel.value));
+
     await poblarCorredorSelect(container.querySelector("#fCorredorId"));
 
     container.querySelector("#btnGps").addEventListener("click", () => {
@@ -177,20 +217,64 @@ const cargaGranosView = {
       }
       const neto = parseFloat(container.querySelector("#fNeto").value) || 0;
 
+      let kgOrigen2 = 0;
+      let origen2Id = "";
+      if (origen2Activo) {
+        origen2Id = origen2IdSel.value;
+        if (!origen2Id) {
+          alert("Elegí el segundo origen o tocá \"Quitar segundo origen\" si no corresponde.");
+          return;
+        }
+        if (origenTipoSel.value === origen2TipoSel.value && origenId === origen2Id) {
+          alert("Elegiste el mismo origen dos veces. Si es un solo origen, quitá el segundo.");
+          return;
+        }
+        kgOrigen2 = parseFloat(fKgOrigen2.value) || 0;
+        if (kgOrigen2 <= 0) {
+          alert("Ingresá los kg que vinieron del segundo origen.");
+          return;
+        }
+        if (kgOrigen2 >= neto) {
+          alert(`Los kg del segundo origen (${kgOrigen2}) tienen que ser menores a los kg netos totales (${neto}).`);
+          return;
+        }
+      }
+      const kgOrigen1 = neto - kgOrigen2;
+
       let origenNombre = "";
       if (origenTipoSel.value === "silo") {
-        const silos = await getSilosBolsaConStock();
-        const silo = silos.find((s) => s.id === origenId);
+        const silosStock = await getSilosBolsaConStock();
+        const silo = silosStock.find((s) => s.id === origenId);
         origenNombre = silo ? silo.nombre : "";
-        if (silo && neto > silo.kgResidual) {
+        if (silo && kgOrigen1 > silo.kgResidual) {
           const continuar = confirm(
-            `El silo bolsa "${silo.nombre}" tiene ${silo.kgResidual} kg residuales y estás cargando ${neto} kg.\n¿Confirmás igual? (puede deberse a una merma no registrada)`
+            `El silo bolsa "${silo.nombre}" tiene ${silo.kgResidual} kg residuales y estás cargando ${kgOrigen1} kg.\n¿Confirmás igual? (puede deberse a una merma no registrada)`
           );
           if (!continuar) return;
         }
       } else {
         const lote = await dbGet("lotes", origenId);
         origenNombre = lote ? lote.nombre : "";
+      }
+
+      let origen2Nombre = "";
+      let origen2Tipo = "";
+      if (origen2Activo) {
+        origen2Tipo = origen2TipoSel.value;
+        if (origen2Tipo === "silo") {
+          const silosStock2 = await getSilosBolsaConStock();
+          const silo2 = silosStock2.find((s) => s.id === origen2Id);
+          origen2Nombre = silo2 ? silo2.nombre : "";
+          if (silo2 && kgOrigen2 > silo2.kgResidual) {
+            const continuar2 = confirm(
+              `El silo bolsa "${silo2.nombre}" tiene ${silo2.kgResidual} kg residuales y estás cargando ${kgOrigen2} kg desde ahí.\n¿Confirmás igual? (puede deberse a una merma no registrada)`
+            );
+            if (!continuar2) return;
+          }
+        } else {
+          const lote2 = await dbGet("lotes", origen2Id);
+          origen2Nombre = lote2 ? lote2.nombre : "";
+        }
       }
 
       const corredorId = container.querySelector("#fCorredorId").value;
@@ -208,6 +292,10 @@ const cargaGranosView = {
         origenTipo: origenTipoSel.value,
         origenId,
         origenNombre,
+        origen2Tipo,
+        origen2Id: origen2Activo ? origen2Id : "",
+        origen2Nombre,
+        kgOrigen2,
         cultivo: container.querySelector("#fCultivo").value.trim(),
         ctg: container.querySelector("#fCtg").value.trim(),
         chofer: container.querySelector("#fChofer").value.trim(),
@@ -246,10 +334,16 @@ async function renderListadoCargas(container) {
   for (const c of cargas) {
     const row = document.createElement("div");
     row.className = "list-item";
+    const kgOrigen2 = c.kgOrigen2 || 0;
+    const kgOrigen1 = (c.kgNeto || 0) - kgOrigen2;
+    const origenTxt = c.origen2Nombre
+      ? `<strong>${c.origenNombre}</strong> (${c.origenTipo === "silo" ? "Silo Bolsa" : "Lote"}) + <strong>${c.origen2Nombre}</strong> (${c.origen2Tipo === "silo" ? "Silo Bolsa" : "Lote"})`
+      : `<strong>${c.origenNombre}</strong> (${c.origenTipo === "silo" ? "Silo Bolsa" : "Lote"})`;
+    const kgTxt = c.origen2Nombre ? `${c.kgNeto} kg netos (${kgOrigen1} + ${kgOrigen2})` : `${c.kgNeto} kg netos`;
     row.innerHTML = `
       <div>
-        <div><strong>${c.origenNombre}</strong> (${c.origenTipo === "silo" ? "Silo Bolsa" : "Lote"}) → ${c.corredorNombre}</div>
-        <div class="muted">${c.fecha?.replace("T", " ")} · ${c.cultivo} · ${c.kgNeto} kg netos</div>
+        <div>${origenTxt} → ${c.corredorNombre}</div>
+        <div class="muted">${c.fecha?.replace("T", " ")} · ${c.cultivo} · ${kgTxt}</div>
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
         <span class="pill ${c.sincronizado ? "sincronizado" : "pendiente"}">${c.sincronizado ? "Sincronizado" : "Pendiente"}</span>

@@ -84,25 +84,46 @@ async function syncNow() {
 
 window.addEventListener("appcampo-sync-now", syncNow);
 
-async function router() {
-  const hashRaw = (location.hash || "").replace("#", "");
-  const [mainKeyRaw, subKey] = hashRaw.split("/");
-  const defaultKey = rutasPermitidas ? rutasPermitidas[0] : "carga";
-  const mainKey = mainKeyRaw || defaultKey;
+// Evita que dos llamadas a router() se pisen entre sí (por ejemplo, el render
+// inicial de la app y el que dispara runSync() al terminar de sincronizar):
+// sin esto, un render a medio terminar puede terminar enganchando sus
+// listeners a los elementos del OTRO render, duplicando comportamiento
+// (ej: un <select> que se termina poblando dos veces).
+let routerEnCurso = false;
+let routerPendiente = false;
 
-  if (rutasPermitidas && !rutasPermitidas.includes(mainKey)) {
-    location.hash = defaultKey;
-    return; // el cambio de hash vuelve a disparar router() con la ruta permitida
-  }
-  if (!mainKeyRaw) {
-    location.hash = mainKey;
+async function router() {
+  if (routerEnCurso) {
+    routerPendiente = true;
     return;
   }
+  routerEnCurso = true;
+  try {
+    const hashRaw = (location.hash || "").replace("#", "");
+    const [mainKeyRaw, subKey] = hashRaw.split("/");
+    const defaultKey = rutasPermitidas ? rutasPermitidas[0] : "carga";
+    const mainKey = mainKeyRaw || defaultKey;
 
-  const route = routes[mainKey] || routes.carga;
-  tabLinks.forEach((a) => a.classList.toggle("active", a.dataset.route === mainKey));
-  await route.view.render(main, subKey);
-  updateSyncStatus();
+    if (rutasPermitidas && !rutasPermitidas.includes(mainKey)) {
+      location.hash = defaultKey;
+      return; // el cambio de hash vuelve a disparar router() con la ruta permitida
+    }
+    if (!mainKeyRaw) {
+      location.hash = mainKey;
+      return;
+    }
+
+    const route = routes[mainKey] || routes.carga;
+    tabLinks.forEach((a) => a.classList.toggle("active", a.dataset.route === mainKey));
+    await route.view.render(main, subKey);
+    updateSyncStatus();
+  } finally {
+    routerEnCurso = false;
+    if (routerPendiente) {
+      routerPendiente = false;
+      router();
+    }
+  }
 }
 
 function updateOnlineBadge() {

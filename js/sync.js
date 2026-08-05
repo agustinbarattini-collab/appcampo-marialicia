@@ -251,6 +251,20 @@ async function unflattenCarga(fila) {
     fila.origenNombre,
     origenTipo === "silo" ? { cultivo: "", kgTotalInicial: 0 } : {}
   );
+
+  let origen2Tipo = "";
+  let origen2Id = null;
+  let origen2Nombre = "";
+  if (fila.origen2Nombre) {
+    origen2Tipo = fila.origen2Tipo === "silo" ? "silo" : "lote";
+    origen2Id = await resolverIdPorNombre(
+      origen2Tipo === "silo" ? "silosBolsa" : "lotes",
+      fila.origen2Nombre,
+      origen2Tipo === "silo" ? { cultivo: "", kgTotalInicial: 0 } : {}
+    );
+    origen2Nombre = String(fila.origen2Nombre).trim();
+  }
+
   const corredorId = await resolverIdPorNombre("corredores", fila.corredorNombre);
   const gps = fila.gpsLat || fila.gpsLng ? { lat: parseFloat(fila.gpsLat) || 0, lng: parseFloat(fila.gpsLng) || 0 } : null;
   return {
@@ -259,6 +273,10 @@ async function unflattenCarga(fila) {
     origenTipo,
     origenId,
     origenNombre: String(fila.origenNombre || "").trim(),
+    origen2Tipo,
+    origen2Id,
+    origen2Nombre,
+    kgOrigen2: parseFloat(fila.kgOrigen2) || 0,
     cultivo: fila.cultivo || "",
     ctg: fila.ctg || "",
     chofer: fila.chofer || "",
@@ -320,7 +338,7 @@ async function unflattenAplicacion(fila) {
   const contratistaId = await resolverIdPorNombre("contratistas", fila.contratistaNombre);
   const loteId = await resolverIdPorNombre("lotes", fila.loteNombre);
   const productos = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 6; i++) {
     const nombre = fila[`producto${i}Nombre`];
     const cantidad = fila[`producto${i}Cantidad`];
     if (!nombre || cantidad === "" || cantidad === undefined) continue;
