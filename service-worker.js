@@ -1,4 +1,4 @@
-const CACHE_NAME = "appcampo-marialicia-v13";
+const CACHE_NAME = "appcampo-marialicia-v14";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -16,6 +16,7 @@ const APP_SHELL = [
   "./js/siembra.js",
   "./js/ordenesTrabajo.js",
   "./js/stockUtils.js",
+  "./js/ui.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
 ];
